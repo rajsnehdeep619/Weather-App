@@ -1,48 +1,76 @@
-import TextField from '@mui/material/TextField';
-import Button from '@mui/material/Button';
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
 import "./SearchBox.css";
-import { useState } from 'react';
-export default function SearchBox(){
-    let [city, setCity] = useState("");
-    const API_URL = "https://api.openweathermap.org/data/2.5/weather";
-    const API_KEY = "dc07b68dcbabefd3d9f998f09e79570e";
+import { useState } from "react";
 
-    let getWeatherInfo = async() =>{
-        let response = await fetch(`${API_URL}?q=${city}&appid=${API_KEY}&units=metric`);
-        let jsonRespnse = await response.json();
-        let result = {
-            city:city,
-            temp: jsonRespnse.main.temp,
-            tempMin: jsonRespnse.main.temp_min,
-            tempMax: jsonRespnse.main.temp_max,
-            humidity:jsonRespnse.main.humidity,
-            feelsLikke: jsonRespnse.main.feels_like,
-            weather: jsonRespnse.weather[0].description
-        }
-        console.log(result);
+export default function SearchBox({ updateInfo }) {
+  const [city, setCity] = useState("");
+
+  const API_URL = "https://api.openweathermap.org/data/2.5/weather";
+  const API_KEY = "dc07b68dcbabefd3d9f998f09e79570e";
+
+  const getWeatherInfo = async (cityName) => {
+    const response = await fetch(
+      `${API_URL}?q=${encodeURIComponent(cityName)}&appid=${API_KEY}&units=metric`
+    );
+
+    const jsonResponse = await response.json();
+
+    // If city not found or API error
+    if (!response.ok) {
+      throw new Error(jsonResponse.message || "City not found");
     }
-    let handleChange =(event) =>{
-        setCity(event.target.value);
+
+    // Prepare data for UI
+    return {
+      city: jsonResponse.name, // real city name from API
+      temp: jsonResponse.main.temp,
+      tempMin: jsonResponse.main.temp_min,
+      tempMax: jsonResponse.main.temp_max,
+      humidity: jsonResponse.main.humidity,
+      feelsLike: jsonResponse.main.feels_like,
+      weather: jsonResponse.weather?.[0]?.description || "N/A",
     };
-    let handleSubmit = (event)=>{
-        event.preventDefault();
-        console.log(city);
-        setCity("");
-        getWeatherInfo();
+  };
+
+  const handleChange = (event) => {
+    setCity(event.target.value);
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    const cityName = city.trim();
+    if (!cityName) return;
+
+    try {
+      const newInfo = await getWeatherInfo(cityName);
+      updateInfo(newInfo); // ✅ update parent state -> UI updates
+      setCity(""); // clear input after success
+    } catch (err) {
+      alert(err.message);
     }
-    return(
-        <div className='SearchBox'>
-        <h1>Search for the weather</h1>
-        <form onSubmit={handleSubmit}>
-        <TextField 
-        id="city" 
-        label="City Name" 
-        variant="outlined" 
-        required value={city} 
-        onChange={handleChange} />
-        <br /><br />
-        <Button variant="contained" type='submit'>Search</Button>
-        </form>
-        </div>
-    )
+  };
+
+  return (
+    <div className="SearchBox">
+      <h1>Search for the weather</h1>
+
+      <form onSubmit={handleSubmit}>
+        <TextField
+          id="city"
+          label="City Name"
+          variant="outlined"
+          required
+          value={city}
+          onChange={handleChange}
+        />
+        <br />
+        <br />
+        <Button variant="contained" type="submit">
+          Search
+        </Button>
+      </form>
+    </div>
+  );
 }
